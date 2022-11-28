@@ -117,13 +117,7 @@
     </style>
 
     <script>
-        const session = sessionStorage.getItem('session');
-
-        let token;
-
-        try {
-            token = JSON.parse(session).token;
-        } catch(e) {}
+        const token = localStorage.getItem('jwt');
 
         if (token) {
             axios.get('/', {
@@ -155,7 +149,7 @@
 
         logoutLink.addEventListener("click", (e) => {
             e.preventDefault();
-            sessionStorage.removeItem('session');
+            localStorage.removeItem('jwt');
             location.reload();
         });
 
@@ -174,7 +168,7 @@
                 }
             }).then((response) => {
                 const { username } =  response.data;
-                sessionStorage.setItem('session', JSON.stringify(response.data));
+                localStorage.setItem('jwt', response.data);
                 location.reload();
             }).catch((response) => {
                 loginErrorMsg.style.opacity = 1;
