@@ -117,10 +117,12 @@
     </style>
 
     <script>
+        const BACKEND_BASE_URL = 'http://localhost:3000';
+
         const token = localStorage.getItem('jwt');
 
         if (token) {
-            axios.get('/', {
+            axios.get(BACKEND_BASE_URL + '/', {
                 headers: {
                     Authorization: token
                 }
@@ -161,13 +163,13 @@
 
             axios({
                 method: 'post',
-                url: '/api/login',
+                url: BACKEND_BASE_URL + '/api/login',
                 data: {
                     login,
                     password
                 }
             }).then((response) => {
-                const { username } =  response.data;
+
                 localStorage.setItem('jwt', response.data);
                 location.reload();
             }).catch((response) => {
