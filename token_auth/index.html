@@ -122,9 +122,9 @@
         const token = localStorage.getItem('jwt');
 
         if (token) {
-            axios.get(BACKEND_BASE_URL + '/', {
+            axios.get(BACKEND_BASE_URL + '/private', {
                 headers: {
-                    Authorization: token
+                    Authorization: `Bearer ${token}`
                 }
             }).then((response) => {
                 const { username } = response.data;

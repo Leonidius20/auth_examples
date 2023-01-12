@@ -8,7 +8,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const request = require("request");
 const cors = require('cors');
-const { auth } = require('express-oauth2-jwt-bearer');
+const { auth, requiredScopes } = require('express-oauth2-jwt-bearer');
 
 const app = express();
 app.use(bodyParser.json());
@@ -23,71 +23,35 @@ const CLIENT_SECRET = 'X3SbkIedpXXmK_zO2VNDlBIQsHW2fbG6Y-4nYU39oXCarSn0H9ojck9Os
 const AUDIENCE = 'https://dev-k65ioh7c6583gibm.eu.auth0.com/api/v2/';
 
 app.use(cors());
-/*app.use(auth({
-    issuerBaseURL: `https://${DOMAIN}`,
+const checkJwt = auth({
     audience: AUDIENCE,
-}));*/
-
-app.use((req, res, next) => {
-    let token = req.get(SESSION_KEY);
-    if (token) {
-        console.log(token);
-        // checking signature
-
-        request(
-            {
-                method: "GET",
-                url: `https://${DOMAIN}/pem`
-            },
-            function (error, response, body) {
-                if (error) res.status(500).json(error).send();
-
-                const certificate = body;
-
-                jwt.verify(token, certificate, { algorithm: 'RS256' },(err, user) => {
-                    console.log(user)
-                    if (err) {
-                        console.log(err);
-                    } else {
-                        //req.user = user.login;
-                        //req.username = users.find(user1 => user1.login === req.user).username;
-                        req.token = token;
-                    }
-                    next();
-                });
-        });
-
-
-    } else {
-        next();
-    }
+    issuerBaseURL: `https://${DOMAIN}/`,
 });
 
 app.get('/', (req, res) => {
-    if (req.token) {
-        // TODO: make a request to user info
+    res.sendFile(path.join(__dirname+'/index.html'));
+})
 
-        const options = {
-            method: 'GET',
-            url: `https://${DOMAIN}/userinfo`,
-            headers: { 'Authorization': `Bearer ${req.token}` }
-        }
+app.get('/private', checkJwt, (req, res) => {
+    // getting token from request jheder
+    const token = req.header('Authorization').split(' ')[1];
 
-        request(options, function (error, response, body) {
-            if (error) console.log(error, body);
-            const userInfo = JSON.parse(body);
-            return res.json({
-                username: userInfo['name'],
-                logout: 'http://localhost:3000/logout'
-            })
-        })
-
-
-    } else {
-        res.sendFile(path.join(__dirname+'/index.html'));
+    // getting user info
+    const options = {
+        method: 'GET',
+        url: `https://${DOMAIN}/userinfo`,
+        headers: { 'Authorization': `Bearer ${token}` }
     }
 
-})
+    request(options, function (error, response, body) {
+        if (error) throw new Error(error);
+        const userInfo = JSON.parse(body);
+        return res.json({
+            username: userInfo['name'],
+            logout: 'http://localhost:3000/logout'
+        })
+    })
+});
 
 app.get('/logout', (req, res) => {
     res.redirect('/');
@@ -123,8 +87,6 @@ app.post('/api/login', (req, res) => {
         } else {
             res.json(jsonResp['access_token']);
         }
-
-        console.log(body);
     });
 });
 
