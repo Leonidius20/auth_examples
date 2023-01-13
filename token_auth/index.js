@@ -65,19 +65,14 @@ app.get('/receivecode', (req, res) => {
                 res.status(401).json(error).send();
             } else {
                 // we have the access token, now get person's details
-                // console.log(jsonResp)
                 const token = jsonResp['access_token'];
-
-                const id_token = jsonResp['id_token'];
-                //res.json(id_token)
-                //console.log(id_token)
                 res.redirect(`${APP_URL}/userinfo?token=${token}`)
 
 
             }
         });
     } else {
-        //
+        res.status(401).json('No code').send();
     }
 });
 
