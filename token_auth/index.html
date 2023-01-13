@@ -18,11 +18,7 @@
                 <p id="login-error-msg">Invalid username <span id="error-msg-second-line">and/or password</span></p>
             </div>
 
-            <form id="login-form" action="/api/login" method="post">
-                <input type="text" name="login" id="username-field" class="login-form-field" placeholder="Username">
-                <input type="password" name="password" id="password-field" class="login-form-field" placeholder="Password">
-                <input type="submit" value="Login" id="login-form-submit">
-            </form>
+            <a href="/login">Access your data</a>
 
         </main>
     </body>
@@ -116,65 +112,4 @@
         }
     </style>
 
-    <script>
-        const BACKEND_BASE_URL = 'http://localhost:3000';
-
-        const token = localStorage.getItem('jwt');
-
-        if (token) {
-            axios.get(BACKEND_BASE_URL + '/private', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }).then((response) => {
-                const { username } = response.data;
-
-                if (username) {
-                    const mainHolder = document.getElementById("main-holder");
-                    const loginHeader = document.getElementById("login-header");
-
-                    loginForm.remove();
-                    loginErrorMsg.remove();
-                    loginHeader.remove();
-
-                    mainHolder.append(`Hello ${username}`);
-                    logoutLink.style.opacity = 1;
-                }
-            });
-        }
-
-
-        const loginForm = document.getElementById("login-form");
-        const loginButton = document.getElementById("login-form-submit");
-        const loginErrorMsg = document.getElementById("login-error-msg");
-        const logoutLink =  document.getElementById("logout");
-
-        logoutLink.addEventListener("click", (e) => {
-            e.preventDefault();
-            localStorage.removeItem('jwt');
-            location.reload();
-        });
-
-        loginButton.addEventListener("click", (e) => {
-            e.preventDefault();
-            const login = loginForm.login.value;
-            const password = loginForm.password.value;
-
-
-            axios({
-                method: 'post',
-                url: BACKEND_BASE_URL + '/api/login',
-                data: {
-                    login,
-                    password
-                }
-            }).then((response) => {
-
-                localStorage.setItem('jwt', response.data);
-                location.reload();
-            }).catch((response) => {
-                loginErrorMsg.style.opacity = 1;
-            });
-        })
-    </script>
 </html>

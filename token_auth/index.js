@@ -22,6 +22,8 @@ const CLIENT_ID = 'jDY86m3UACkJeAaOLj7XCWc2409fEUue';
 const CLIENT_SECRET = 'X3SbkIedpXXmK_zO2VNDlBIQsHW2fbG6Y-4nYU39oXCarSn0H9ojck9Os52wlwev';
 const AUDIENCE = 'https://dev-k65ioh7c6583gibm.eu.auth0.com/api/v2/';
 
+const APP_URL = 'http://localhost:3000';
+
 app.use(cors());
 const checkJwt = auth({
     audience: AUDIENCE,
@@ -32,64 +34,102 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname+'/index.html'));
 })
 
-app.get('/private', checkJwt, (req, res) => {
-    // getting token from request jheder
-    const token = req.header('Authorization').split(' ')[1];
+app.get('/logout', (req, res) => {
+    res.redirect(`https://${DOMAIN}/v2/logout?client_id=${CLIENT_ID}&returnTo=${encodeURIComponent(APP_URL)}`);
+});
 
-    // getting user info
+app.get('/receivecode', (req, res) => {
+    if (req.query.code) { // if we got a code
+        const code = req.query.code;
+
+        // exchange it for an access token
+        const options = {
+            method: 'POST',
+            url: `https://${DOMAIN}/oauth/token`,
+            headers: {'content-type': 'application/x-www-form-urlencoded'},
+            form: {
+                grant_type: 'authorization_code',
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
+                code: code,
+                scope: 'offline_access openid profile email',
+                redirect_uri: `${APP_URL}/receivecode`
+            }
+        };
+
+        request(options, function (error, response, body) {
+            if (error) throw new Error(error);
+
+            const jsonResp = JSON.parse(body);
+            if (body.error) {
+                res.status(401).json(error).send();
+            } else {
+                // we have the access token, now get person's details
+                // console.log(jsonResp)
+                const token = jsonResp['access_token'];
+
+                const id_token = jsonResp['id_token'];
+                //res.json(id_token)
+                //console.log(id_token)
+                res.redirect(`${APP_URL}/userinfo?token=${token}`)
+
+
+            }
+        });
+    } else {
+        //
+    }
+});
+
+app.get('/userinfo', (req, res) => {
+    const accessToken = req.query.token;
+    if (!accessToken) {
+        res.send('Error: No access token in URL parameters');
+    }
+
     const options = {
         method: 'GET',
         url: `https://${DOMAIN}/userinfo`,
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
     }
 
     request(options, function (error, response, body) {
         if (error) throw new Error(error);
         const userInfo = JSON.parse(body);
-        return res.json({
-            username: userInfo['name'],
-            logout: 'http://localhost:3000/logout'
-        })
+        const username = userInfo['name'];
+        const email = userInfo['email'];
+        res.send(getHtml(username, email));
     })
 });
 
-app.get('/logout', (req, res) => {
-    res.redirect('/');
-});
+app.get('/login', (req, res) => {
+    const callbackUrl = `${APP_URL}/receivecode`;
 
-app.post('/api/login', (req, res) => {
-    const { login, password } = req.body;
-
-    const options = { method: 'POST',
-        url: `https://${DOMAIN}/oauth/token`,
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        form:
-            {
-                grant_type: 'password',
-                username: login,
-                password: password,
-                audience: AUDIENCE,
-                scope: 'offline_access openid profile email',
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET
-            }
-    };
-
-    request(options, function (error, response, body) {
-        if (error) {
-
-            res.status(401).json(error).send();
-        }
-
-        const jsonResp = JSON.parse(body);
-        if (body.error) {
-            res.status(401).json(error).send();
-        } else {
-            res.json(jsonResp['access_token']);
-        }
-    });
+    res.redirect(
+        `https://${DOMAIN}/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&response_mode=query&scope=${encodeURIComponent('offline_access openid profile email')}`);
 });
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+
+function getHtml(username, email) {
+    return `
+    <!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login</title>
+    </head>
+    <body>
+        <main id="main-holder">
+            <div>Hello, ${username}!</div>
+            <div>Your email is: ${email}</div>
+            <a href="/">Back to main page</a>
+            <a href="/logout">Logout</a>
+        </main>
+    </body>
+    `;
+}
